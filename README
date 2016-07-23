@@ -1,0 +1,242 @@
+
+                                    Trie-Gen
+                                    ~~~~~~~~
+                        Stefan Vargyas, stvar@yahoo.com
+
+                                  Jul 15, 2016
+
+Table of Contents
+-----------------
+
+0. Copyright
+1. The Trie-Gen Program
+2. Configuring Trie-Gen
+3. Building and Testing Trie-Gen
+4. References
+5. Appendix
+
+
+0. Copyright
+============
+
+This program is GPL-licensed free software. Its author is Stefan Vargyas. You
+can redistribute it and/or modify it under the terms of the GNU General Public
+License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+You should have received a copy of the GNU General Public License along with
+this program (look up for the file COPYING in the top directory of the source
+tree). If not, see http://gnu.org/licenses/gpl.html.
+
+
+1. The Trie-Gen Program
+=======================
+
+The program came to existence upon a need for a small tool capable to generate
+C++ code for string look-up functions defined on small sets of keywords (see the
+Appendix for an edifying example). The generated code would have been integrated
+into a larger program that itself generates and processes a certain kind of
+abstract syntax trees.
+
+For solving the problem I relied on a well-known data structure -- the trie --
+and on its associated algorithms. A standard reference for tries is [2]; follow
+also the references therein.
+
+
+2. Configuring Trie-Gen
+=======================
+
+The Trie-Gen program is written in modern C++ (ISO/IEC 14882:2011 compliant,
+aka C++11) and was developed under a GNU/Linux environment using the GCC C++
+compiler v4.8.0 [1] and a few common GNU/Linux power-tools.
+
+While writing C++ code, I regularly pay a good deal of attention making as
+explicit as possible each of the low-level choices assumed. To that effect,
+I was reusing an useful header file 'config.h' which collects a handful of
+relevant configuration parameters:
+
+  $ grep -how 'CONFIG_[A-Z0-9_]*[A-Z0-9]' src/config.h|sort -u
+  CONFIG_ARITHMETIC_SHIFT_MACHINE
+  CONFIG_BITOPS_SIGN_AND_BITS_MACHINE
+  CONFIG_MEM_ALIGNOF
+  CONFIG_PTR_TO_INT_IDENTOP
+  CONFIG_TWOS_COMPLEMENT_MACHINE
+  CONFIG_VA_END_NOOP
+
+From the above list, only one of the parameters was actually used:
+
+  $ grep -how 'CONFIG_[A-Z0-9_]*[A-Z0-9]' src/*.?pp|sort -u
+  CONFIG_VA_END_NOOP
+
+Before proceeding further to build 'trie', please assure yourself that the
+above parameter does have a meaningful value, in accordance with the target
+platform (machine and compiler) on which the program is supposed to be built.
+
+
+3. Building and Testing Trie-Gen
+================================
+
+In the development of 'trie', I used an experimental GCC v4.8.0 (built from
+sources) and GNU make v3.81. If using a non-GNU make, then is very likely
+that the makefiles 'common.mk' and 'Makefile' would need a bit of tweaking.
+
+Note that a prerequisite of building the program is that the version of GCC be 
+at least the above v4.8.0. That is because the program requires a substantial
+amount of C++11 features be implemented by the compiler and by its Standard C++
+Library. Even though did not investigated thoroughly, I know no impediment using
+more recent versions of the tools named above.
+
+To build the program, simply issue the following command:
+
+  $ make
+
+Expect to get neither warnings nor errors out of 'make'. If everything went OK,
+'make' is supposed to have produced the binary 'trie'.
+
+To clean-up the directory containing the source files of generated object files
+or, alternatively, to remove all the files obtained from 'make', issue one of
+the following commands respectively:
+
+  $ make clean
+
+  $ make allclean
+
+After building the program by running 'make' successfully, first thing to do is
+to see the brief help info provided by the program itself:
+
+  $ ./trie --help
+
+The received package comes along with a complete test-suite. For that look into
+the directory 'test' for shell script files of form 'test*.sh'. The main script
+is 'test.sh': it starts the whole regression testing process. Note that these
+bash shell scripts depend upon a few utility programs commonly found on every
+GNU/Linux installation. The 'test' directory contains additionally the source
+from which the 'test*.sh' bash scripts were generated: the file 'test.txt'.
+
+The shell script 'test/test.sh' can be invoked simply by issuing:
+
+  $ make test
+  test: NAME RESULT
+  ...
+
+NAME is the name of the test case and RESULT is either 'OK' or 'failed'. The
+expected behaviour would be that of all test cases to succeed. In the case of
+things going the wrong way for a particular test case, more verbose output is
+obtainable when running the corresponding 'test-*.sh' shell script on its own.
+It will produce a diff between expected and actual output of 'trie'.
+
+Note that any user's explicit invocation of these bash test scripts must be
+initiated from within the 'test' directory.
+
+The programs used by the testing scripts 'test/test*.sh' are the following:
+
+  * GNU bash 3.2.51,
+  * GNU diff 2.8.7 (part of diffutils package),
+  * GNU awk 3.1.8, and
+  * GNU sed 4.1.5.
+
+
+5. References
+=============
+
+[1] GNU Compilers
+    http://gcc.gnu.org/onlinedocs/gcc-4.8.0/gcc/
+
+[2] Robert Sedgewick & Philippe Flajolet:
+    An Introduction to the Analysis of Algorithms, 2nd ed.
+    Addison-Wesley, 2013, ISBN: 978-0-321-90575-8
+
+    Chapter 8: Strings and Tries, pp. 448-471
+
+
+6. Appendix
+===========
+
+For the following set of keywords (which is part of a longer list of AST node
+names describing a certain subset of python language):
+
+  1  AndTest
+  2  ArgsCallExpr
+  3  KeyDatum
+  4  KeyDatumDictExpr
+  5  KeyDatumList
+
+the (compacted) trie structure is:
+
+  {
+      "A" {
+          "ndTest": 1
+          "rgsCallExpr": 2
+      }
+      "KeyDatum": 3 {
+          "DictExpr": 4
+          "List": 5
+      }
+  }
+
+and the corresponding 'lookup' function might look like the one below:
+
+  int lookup(const char* p)
+  {
+      switch (*p ++) {
+      case 'A':
+          switch (*p ++) {
+          case 'n':
+              if (*p ++ == 'd' &&
+                  *p ++ == 'T' &&
+                  *p ++ == 'e' &&
+                  *p ++ == 's' &&
+                  *p ++ == 't' &&
+                  *p == 0)
+                  return 1;
+              return error;
+          case 'r':
+              if (*p ++ == 'g' &&
+                  *p ++ == 's' &&
+                  *p ++ == 'C' &&
+                  *p ++ == 'a' &&
+                  *p ++ == 'l' &&
+                  *p ++ == 'l' &&
+                  *p ++ == 'E' &&
+                  *p ++ == 'x' &&
+                  *p ++ == 'p' &&
+                  *p ++ == 'r' &&
+                  *p == 0)
+                  return 2;
+          }
+          return error;
+      case 'K':
+          if (*p ++ == 'e' &&
+              *p ++ == 'y' &&
+              *p ++ == 'D' &&
+              *p ++ == 'a' &&
+              *p ++ == 't' &&
+              *p ++ == 'u' &&
+              *p ++ == 'm') {
+              if (*p == 0)
+                  return 3;
+              switch (*p ++) {
+              case 'D':
+                  if (*p ++ == 'i' &&
+                      *p ++ == 'c' &&
+                      *p ++ == 't' &&
+                      *p ++ == 'E' &&
+                      *p ++ == 'x' &&
+                      *p ++ == 'p' &&
+                      *p ++ == 'r' &&
+                      *p == 0)
+                      return 4;
+                  return error;
+              case 'L':
+                  if (*p ++ == 'i' &&
+                      *p ++ == 's' &&
+                      *p ++ == 't' &&
+                      *p == 0)
+                      return 5;
+              }
+          }
+      }
+      return error;
+  }
+
+

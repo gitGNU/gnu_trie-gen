@@ -1,0 +1,200 @@
+# Copyright (C) 2016  Stefan Vargyas
+# 
+# This file is part of Trie-Gen.
+# 
+# Trie-Gen is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# Trie-Gen is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with Trie-Gen.  If not, see <http://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------------------
+
+# This file contains the list of bugs found, in chronological order. For each of
+# these bugs there is a corresponding test case, in the 'bugs' test group in the
+# 'test' directory, which records the way the bug got fixed.
+
+--------------------------------------------------------------------------------
+
+$ date
+Thu Apr 14 16:54:00 EEST 2016
+
+$ ./trie -gc -ot -ti --dump-opt
+node-type:    int
+trie-type:    ternary
+output-type:  trie
+gen-type:     compact
+escape-chars: -
+expr-type:    cxxpy
+expr-depth:   0
+print-attrs:  no
+print-stats:  no
+print-dots:   no
+debug:        0
+verbose:      0
+argc:         0
+$
+
+$ print aef ae a abg ab abc abd|./trie -gc -ot -ti
+{
+    "a": 3 {
+        "b": 5 {
+            "c": 6
+            "d": 7
+            "g": 4
+        }
+        "e": 2 {
+            "f": 1
+        }
+    }
+}
+$ print aef ae abg a abc ab abd|./trie -gc -ot -ti -Ta
+{
+    "a": 4 {
+        "b": 6 {
+            "c": 5
+            "d": 7
+            "g": 3
+        }
+        "e": 2 {
+            "f": 1
+        }
+    }
+}
+$
+
+# stev: BUG #1: missing #4 "a" and #6 "ab"
+$ print aef ae abg a abc ab abd|./trie -gc -ot -ti
+{
+    "a" {
+        "b" {
+            "c": 5
+            "d": 7
+            "g": 3
+        }
+        "e": 2 {
+            "f": 1
+        }
+    }
+}
+$
+
+--------------------------------------------------------------------------------
+
+$ date
+Wed Jul 13 10:28:28 EEST 2016
+
+# stev: BUG #2: missing #4 "ab"
+$ print abg a abc ab abd|./trie -gc -ot -ti
+{
+    "a": 2 {
+        "b" {
+            "c": 3
+            "d": 5
+            "g": 1
+        }
+    }
+}
+$
+
+# stev: note that the two bugs above occur only in the case of
+# ternary tries and not in the case of array tries
+
+--------------------------------------------------------------------------------
+
+$ date
+Wed Jul 20 11:35:51 EEST 2016
+
+$ print a|./trie -gc -oc -Ta
+    if (*p ++ == 'a' &&
+        *p == 0)
+        return "a";
+    return error;
+$ print a|./trie -gc -oc -Tt
+    if (*p ++ == 'a' &&
+        *p == 0)
+        return "a";
+    return error;
+$ print $'\x7f'|./trie -gc -oc -Ta
+    if (*p ++ == '\x7f' &&
+        *p == 0)
+        return "\x7f";
+    return error;
+$ print $'\x7f'|./trie -gc -oc -Tt
+    if (*p ++ == '\x7f' &&
+        *p == 0)
+        return "\x7f";
+    return error;
+$
+
+# stev: BUG #3: the program shouldn't generate the second 'return' below:
+$ print $'\x80'|./trie -gc -oc -Ta
+    if (*p ++ == '\x80' &&
+        *p == 0)
+        return "\x80";
+        return error;
+    return error;
+$
+
+# stev: BUG #4: the program shouldn't generate the second 'return' below:
+$ print $'\x80'|./trie -gc -oc -Tt
+    if (*p ++ == '\x80' &&
+        *p == 0)
+        return "\x80";
+        return error;
+    return error;
+$
+
+$ print a|./trie -gw -oc -Ta
+    if (*p ++ == 'a') {
+        if (*p == 0)
+            return "a";
+    }
+    return error;
+$ print a|./trie -gw -oc -Tt
+    if (*p ++ == 'a') {
+        if (*p == 0)
+            return "a";
+    }
+    return error;
+$ print $'\x7f'|./trie -gw -oc -Ta
+    if (*p ++ == '\x7f') {
+        if (*p == 0)
+            return "\x7f";
+    }
+    return error;
+$ print $'\x7f'|./trie -gw -oc -Tt
+    if (*p ++ == '\x7f') {
+        if (*p == 0)
+            return "\x7f";
+    }
+    return error;
+$
+
+# stev: BUG #5: the program shouldn't generate the second 'return' below:
+$ print $'\x80'|./trie -gw -oc -Ta
+    if (*p ++ == '\x80') {
+        if (*p == 0)
+            return "\x80";
+        return error;
+    }
+    return error;
+$
+
+# stev: BUG #6: the program shouldn't generate the second 'return' below:
+$ print $'\x80'|./trie -gw -oc -Tt
+    if (*p ++ == '\x80') {
+        if (*p == 0)
+            return "\x80";
+    }
+        return error;
+    return error;
+$
+

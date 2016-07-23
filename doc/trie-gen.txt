@@ -1,0 +1,834 @@
+Copyright (C) 2016  Stefan Vargyas
+
+This file is part of Trie-Gen.
+
+Trie-Gen is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Trie-Gen is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Trie-Gen.  If not, see <http://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------------------
+
+                                    Trie-Gen
+                                    ========
+
+                        Ştefan Vargyas, stvar@yahoo.com
+
+                                  Jul 22, 2016
+
+
+
+
+Table of Contents
+-----------------
+
+1. The Trie-Gen Program
+2. The Tries of Trie-Gen
+3. The C++11 of Trie-Gen
+4. The Use Cases of Trie-Gen
+   a. The Main Program of Trie-Gen
+   b. The Shell Function 'gen-func'
+5. References
+6. Appendix
+
+
+
+1. The Trie-Gen Program
+=======================
+
+The initiating problem Trie-Gen was supposed to solve has been the following:
+given a small set of strings, generate the text of a C++ function as shown by
+the illustration below:
+
+  * for the key/value pairs in the table:
+
+      value  key
+      -----  ---
+        1    pot
+        2    potato
+        3    pottery
+
+    the generated function should look like:
+
+      int lookup(const char* p)
+      {
+          if (*p ++ == 'p' &&
+              *p ++ == 'o' &&
+              *p ++ == 't') {
+              if (*p == 0)
+                  return 1;
+              switch (*p ++) {
+              case 'a':
+                  if (*p ++ == 't' &&
+                      *p ++ == 'o' &&
+                      *p == 0)
+                      return 2;
+                  return error;
+              case 't':
+                  if (*p ++ == 'e' &&
+                      *p ++ == 'r' &&
+                      *p ++ == 'y' &&
+                      *p == 0)
+                      return 3;
+              }
+          }
+          return error;
+      }
+
+Originally, I needed this functionality to be integrated into a larger program
+that itself generates and processes a certain kind of abstract syntax trees.
+
+
+2. The Tries of Trie-Gen
+========================
+
+Even though the starting point of Trie-Gen was the problem of generating C++
+functions of a specific kind for small given sets of strings, during development
+Trie-Gen became more of an exercising ground for quite a few algorithms applied
+to two different types of trie structures. These data structures are widely
+known in the literature (Knuth [6], Sedgewick and Wayne [7]) as array tries
+and ternary tries (or ternary search tries, TSTs) respectively.
+
+The array tries are described to some extend in the classical book of Knuth [6].
+More details about a whole bouquet of array tries related algorithms are to be
+found in Sedgewick and Wayne [7].
+
+The ternary tries are a beautiful and very useful data structure which appear as
+such for the first time in the paper of Bentley and Sedgewick [9]. Subsequently,
+the authors disseminated widely their work by publishing an article dedicated to
+the subject in the popular Dr. Dobbs Journal [10]. Notable is that ternary tries
+are presented with considerable account by professor Sedgewick in his well-known
+series of textbooks on algorithms (for which [7] is the most recent instance).
+
+Not only that ternary tries are beautiful since they are simple, but they are
+quite effective for practical applications because are very efficient. The paper
+of Bentley and Sedgewick [9] backs up its claims with significant experimental
+data. Using sophisticated mathematical apparatus of analysis of algorithms, the
+papers of Clément, Flajolet and Vallée [11, 12] put on a firm base the empirical
+data obtained through the experiments conducted by Bentley and Sedgewick [9]. A
+consistent account about the meaning and purpose of the concept of Analysis of
+Algorithms (AofA -- a term introduced by Donald Knuth) is given in first chapter
+of the book of Sedgewick and Flajolet [8]. Amongst other data structures, tries
+receive an in-depth coverage from the perspective of AofA in a dedicated chapter
+of the book (see the notes attached to reference entry [8]).
+
+The two kinds of tries Trie-Gen is using are defined and implemented by two
+corresponding class templates, 'ArrayTrie<>' and 'TernaryTrie<>', encompassed
+in the namespace 'Trie' in the file 'src/trie.hpp'. For each of the two classes 
+there are nine most important algorithms:
+
+  algorithm              function name
+  ---------------------  ----------------
+  lookup-key             lookup
+  insert-key             insert
+  print-structure        print_obj
+  generate-wide-trie     gen_wide_trie
+  generate-compact-trie  gen_compact_trie  
+  generate-wide-code     gen_wide_code
+  generate-compact-code  gen_compact_code
+  generate-wide-expr     gen_wide_expr
+  generate-compact-expr  gen_compact_expr
+
+For the 'lookup-key' and 'insert-key' algorithms I used the following resources:
+
+  function name          resource in Sedgewick and Wayne [7]
+  ---------------------  ------------------------------------------------
+  ArrayTrie<>::lookup    iterative variant of recursive 'get' of Alg. 5.4
+  ArrayTrie<>::insert    iterative variant of recursive 'put' of Alg. 5.4
+  TernaryTrie<>::lookup  iterative variant of recursive 'get' of Alg. 5.5
+  TernaryTrie<>::insert  iterative variant of recursive 'put' of Alg. 5.5
+
+Note that professor Sedgewick made available C implementations for the iterative
+variants of 'lookup-key' and 'insert-key' of ternary tries on his own site (see
+the links attached to reference entry [9], specifically the two C source files,
+'tstdemo.c' and 'demo.c'). I used his C code as spring of inspiration for my own
+implementation in C++. The iterative variants of Algorithms 5.4 of [7] are of my
+own making. 
+
+The rest of algorithms in the table above -- the ones that are producing actual
+output -- are all of my own making. The 'print-structure' algorithms produce
+for the structures in case textual representations that are closely resembling 
+the actual internal C++ representations.
+
+The algorithms 'generate-{wide,compact}-trie' are producing two different type
+of textual representations of the trie that corresponds uniquely to the strings
+given on input (for the uniqueness property of tries see Sedgewick and Wayne [7],
+Proposition F, in chapter 5, p. 742). 'Wide' tries stand for the usual mode of
+depicting conceptually the trie structure associated to a given set of strings.
+In a 'wide' trie each node of the trie corresponds to a 'char' of one or more of
+the input strings. In contrast to 'wide' representations, in 'compact' tries the
+number of nodes are reduced by replacing branchless paths with a sole node. In
+'compact' tries a node might well correspond to a sequence of 'chars' of one or
+more of the input strings.
+
+The algorithms 'generate-{wide,compact}-code' are producing the textual body of
+the 'lookup' functions corresponding to the strings given on input (the 'lookup'
+functions were defined implicitly in the first section).
+
+The algorithms 'generate-{wide,compact}-expr' are producing regex-like textual
+representations of three kinds of syntaxes: 'cxxpy', 'perl' and 'bash'. While
+'cxxpy' resembles the EBNF -- Extended Backus–Naur Form -- meta-syntax, 'perl'
+stands for the PCRE -- Perl Compatible Regular Expressions -- syntax and 'bash'
+refers to the so called "brace expansion" syntax of bash. The subsection 4.a of
+section 4 below shows edifying examples of these three types of representations. 
+
+Each of these six algorithms 'generate-{wide,compact}-{trie,code,expr}' are of
+my own making.
+
+
+3. The C++11 of Trie-Gen
+========================
+
+Trie-Gen was written in the C++11 language. I relied on GCC [1] for compiling
+the sources: due to its praisable implementation of C++11 language, my code grew
+up smoothly and conveniently.
+
+While writing C++ code, I pay attention at making explicit the low-level choices
+assumed. To that effect, for quite some time I'm accustomed to reusing a header
+file 'config.h' which collects a handful of configuration parameters:
+
+  $ grep -how 'CONFIG_[A-Z0-9_]+' src/config.h|sort -u
+  CONFIG_ARITHMETIC_SHIFT_MACHINE
+  CONFIG_BITOPS_SIGN_AND_BITS_MACHINE
+  CONFIG_MEM_ALIGNOF
+  CONFIG_PTR_TO_INT_IDENTOP
+  CONFIG_TWOS_COMPLEMENT_MACHINE
+  CONFIG_VA_END_NOOP
+
+From this list, only one of the parameters was actually used:
+
+  $ grep -how 'CONFIG_[A-Z0-9_]+' src/*.?pp|sort -u
+  CONFIG_VA_END_NOOP
+
+The meaning of each of these parameters is documented in the file itself. A few
+of these parameters refer to C++ and/or C language issues that are pertaining
+to defining statements of the very important ISO/IEC a programmer working tools
+[2, 3, 4, 5].
+
+In this context is worth to remark that the source code of Trie-Gen contains
+references into the ISO/IEC working tools [2, 3, 4, 5] related to various other
+C++ (or C) language issues.
+
+In the rest of this section I will tackle some of the implementation details of
+the trie classes in file 'src/trie.hpp' -- 'ArrayTrie<>' and 'TernaryTrie<>'.
+
+The public interfaces of these two trie classes are identical. Below can be seen
+the most significant part of the public interface of 'ArrayTrie<>':
+
+  namespace Trie {
+  ...
+
+  enum class gen_type_t {
+      compact,
+      wide
+  };
+
+  template<
+      typename T,
+      typename C = char,
+      template<typename> class R = trie_traits_t>
+  class ArrayTrie :
+      private R<C>
+  {
+  public:
+      typedef T value_t;
+      typedef R<C> traits_t;
+      typedef typename traits_t::char_t char_t;
+      typedef typename traits_t::string_t string_t;
+  
+      ArrayTrie();
+      ~ArrayTrie();
+  
+      ArrayTrie(const ArrayTrie&) = delete;
+      ArrayTrie& operator=(const ArrayTrie&) = delete;
+  
+      ArrayTrie(ArrayTrie&&) = delete;
+      ArrayTrie operator=(ArrayTrie&&) = delete;
+  
+      const value_t* get(const string_t& key) const;
+      const value_t* get(const char_t* key) const;
+  
+      void put(const string_t& key, const value_t& val = {});
+      void put(const char_t* key, const value_t& val = {});
+  
+      void put(const string_t& key, value_t&& val);
+      void put(const char_t* key, value_t&& val);
+  
+      void print(std::ostream& ost) const;
+  
+      void gen_trie(std::ostream& ost, gen_type_t type) const;
+      void gen_code(std::ostream& ost, gen_type_t type) const;
+      void gen_expr(std::ostream& ost, gen_type_t type) const;
+      ...
+  };
+  ...
+
+  } // namespace Trie
+
+The 'get' and 'put' member functions do have the obvious meaning. The 'print' and
+'gen_{trie,code,expr}' functions are no more than convenient public interfaces to
+the private functions 'print_obj' and 'gen_{wide,compact}_{trie,code,expr}' which
+were introduced in section 2 and for which relevant use cases are to be presented
+in section 4.
+
+Notice that the truncated class declaration shown above indicate that these two
+trie classes are neither to be copied nor to be moved. This is quite a cut-off
+functionality, but, for the current purposes of Trie-Gen, it is sufficient.
+
+Now, moving focus toward the inner workings of these classes, it is appropriate
+to discuss about the memory management implemented for the types of entities that
+are to be handled internally by each of the classes. First thing to say is that
+the entities manipulated by the trie classes are of three types: keys, values and
+nodes. The keys and the values are passed in through the 'put' functions by the
+user. The nodes are specific internal structures of each of the two types of trie
+classes: each of '{Array,Ternary}Trie<>' classes define an own 'struct' 'node_t'.
+
+Memory management of keys for both classes is trivial, since these trie data
+structures do have the interesting property that they do not store explicitly
+the keys passed in. For values the story is different: indeed they have to be
+stored internally as to be able to return back reference of them when the user
+is asking for that.
+
+The trie classes store copied-from or moved-from values created from the values
+taken in via the 'put' functions. The means by which the two classes accomplish
+this functionality are, however, different. The 'ArrayTrie<>' class stores those
+copied-from or by case move-from values within the 'node_t' struct. On the other
+hand, the 'TernaryTrie<>' class stores the copied-from or moved-from values into
+a dedicated container -- 'vals' of type 'vals_t'. The nodes of 'TernaryTrie<>'
+class -- due to the peculiarity of them having to use an 'union' -- store only
+pointers to actual 'value_t' instances in 'vals'. As a matter of fact, only few
+nodes of the internal tree structure in the trie receives a pointer to an object
+in 'vals'. Consequently, the memory management of the values within a ternary
+trie is exactly that which is offered by its 'vals' container.
+
+For managing the 'node_t' instances, both of the trie classes uses an externally
+defined 'TriePool<>' class. The memory management of nodes in both trie classes
+is precisely the memory management of nodes realized by the 'TriePool<>' class.
+
+Similarly to the case of 'vals' of 'TernaryTrie<>' class, the 'TriePool<>' do
+accomplish its task by relying on another standard container -- the ubiquitous
+'std::vector<>': in our case 'std::vector<std::unique_ptr<node_t>>'. When asked,
+by a call to the function 'new_node', to supply a freshly created instance of
+'node_t', 'TriePool<>' simply does the following sequence of steps:
+
+  (1) create a node and hold it in a 'std::unique_ptr<>';
+  (2) than 'std::move' the unique pointer into the base
+      'std::vector<std::unique_ptr<node_t>>';
+  (3) finally, return a pointer the node just created.
+
+The code of 'new_node' function lists completely as follows:
+
+  template<typename T>
+  class TriePool :
+      private std::vector<std::unique_ptr<T>>
+  {
+  public:
+      typedef std::vector<std::unique_ptr<T>> base_t;
+      typedef T node_t;
+      ...
+      node_t* new_node() noexcept
+      {
+          // stev: assert the existence of a moving
+          // 'push_back' member function in base_t
+          using
+              moving_func_t =
+              void (base_t::*)(typename base_t::value_type&&);
+          STATIC_ASSERT(
+              static_cast<moving_func_t>(&base_t::push_back));
+          // stev: terminate the program when
+          //       failed allocating a new node
+          auto n = Ext::make_unique<node_t>();
+          // stev: retain the newly created pointer
+          //       such that we can pass it out
+          auto r = n.get();
+          // stev: move the unique pointer into the
+          //       pool: the lifetime of the pointer
+          //       extends until that of the pool
+          base_t::push_back(std::move(n));
+          return r;
+      }
+      ...
+  };
+  
+As a result, the memory management of 'TriePool<>' is exactly the one provided
+by its base 'std::vector<std::unique_ptr<node_t>>'.
+
+
+4. The Use Cases of Trie-Gen
+============================
+
+In this section I'll present the most important use cases of Trie-Gen. This
+amounts to invoking the main program of Trie-Gen -- 'trie' -- and the shell
+function 'gen-func' (which depends on 'trie'). For configuring and building
+the binary program 'trie' refer to the corresponding sections in the README
+file located in the top directory of the source tree.
+
+4.a. The Main Program of Trie-Gen
+---------------------------------
+
+The presentation of the most important use cases of 'trie' consists of invoking
+the program on the three strings used as illustration in section 1:
+
+  $ trie() { printf '%s\n' pot potato pottery|./trie --node=int "$@"; }
+
+Each of the calls that I'll make below to the shell function 'trie' above
+will put at work one of the output generating functions listed in the tables of
+section 2: 'print_obj', 'gen_{wide,compact}_trie', 'gen_{wide,compact}_code' and
+'gen_{wide,compact}_expr' applied to 'ArrayTrie<>' and 'TernaryTrie<>' classes.
+
+The output of 'ArrayTrie<>::print_obj' shows the array trie that has been built
+in its complete shape and content:
+
+  $ trie --trie=array --output=obj --dots
+  {
+  .   'p' {
+  .   .   'o' {
+  .   .   .   't': 1 {
+  .   .   .   .   'a' {
+  .   .   .   .   .   't' {
+  .   .   .   .   .   .   'o': 2
+  .   .   .   .   .   }
+  .   .   .   .   }
+  .   .   .   .   't' {
+  .   .   .   .   .   'e' {
+  .   .   .   .   .   .   'r' {
+  .   .   .   .   .   .   .   'y': 3
+  .   .   .   .   .   .   }
+  .   .   .   .   .   }
+  .   .   .   .   }
+  .   .   .   }
+  .   .   }
+  .   }
+  }
+
+The 'print_obj' function of class 'TernaryTrie<>' produces an output completely
+different than the one of class 'ArrayTrie<>' -- the internal C++ structures of
+the two classes are entirely dissimilar:
+
+  $ trie --trie=ternary --output=obj --dots
+  {
+  .   .ch: 'p'
+  .   .eq {
+  .   .   .ch: 'o'
+  .   .   .eq {
+  .   .   .   .ch: 't'
+  .   .   .   .eq {
+  .   .   .   .   .val: 1
+  .   .   .   .   .hi {
+  .   .   .   .   .   .ch: 'a'
+  .   .   .   .   .   .eq {
+  .   .   .   .   .   .   .ch: 't'
+  .   .   .   .   .   .   .eq {
+  .   .   .   .   .   .   .   .ch: 'o'
+  .   .   .   .   .   .   .   .eq {
+  .   .   .   .   .   .   .   .   .val: 2
+  .   .   .   .   .   .   .   }
+  .   .   .   .   .   .   }
+  .   .   .   .   .   }
+  .   .   .   .   .   .hi {
+  .   .   .   .   .   .   .ch: 't'
+  .   .   .   .   .   .   .eq {
+  .   .   .   .   .   .   .   .ch: 'e'
+  .   .   .   .   .   .   .   .eq {
+  .   .   .   .   .   .   .   .   .ch: 'r'
+  .   .   .   .   .   .   .   .   .eq {
+  .   .   .   .   .   .   .   .   .   .ch: 'y'
+  .   .   .   .   .   .   .   .   .   .eq {
+  .   .   .   .   .   .   .   .   .   .   .val: 3
+  .   .   .   .   .   .   .   .   .   }
+  .   .   .   .   .   .   .   .   }
+  .   .   .   .   .   .   .   }
+  .   .   .   .   .   .   }
+  .   .   .   .   .   }
+  .   .   .   .   }
+  .   .   .   }
+  .   .   }
+  .   }
+  }
+
+Unlike the 'print_obj' functions, the 'gen_{wide,compact}_trie' functions of the
+the two trie classes produce identical output. This should be as expected since
+these four functions are supposed to generate a representation of the tries data
+structures in case which is precisely that of the conceptual 'wide' or 'compact'
+trie.
+
+  $ trie --trie=ternary --output=trie --gen=wide --dots
+  {
+  .   'p' {
+  .   .   'o' {
+  .   .   .   't': 1 {
+  .   .   .   .   'a' {
+  .   .   .   .   .   't' {
+  .   .   .   .   .   .   'o': 2
+  .   .   .   .   .   }
+  .   .   .   .   }
+  .   .   .   .   't' {
+  .   .   .   .   .   'e' {
+  .   .   .   .   .   .   'r' {
+  .   .   .   .   .   .   .   'y': 3
+  .   .   .   .   .   .   }
+  .   .   .   .   .   }
+  .   .   .   .   }
+  .   .   .   }
+  .   .   }
+  .   }
+  }
+
+  $ trie --trie=ternary --output=trie --gen=compact --dots
+  {
+  .   "pot": 1 {
+  .   .   "ato": 2
+  .   .   "tery": 3
+  .   }
+  }
+
+Next, calling for the functions 'gen_{wide,compact}_code', the generated C++
+code (it could rightfully be considered plain C code) is as shown below. As for
+the previous use-case, I invoke the respective functions only for 'TernaryTrie<>'
+class since the corresponding functions of 'ArrayTrie<>' produce identical code.
+
+  $ trie --trie=ternary --output=c-code --gen=wide
+      if (*p ++ == 'p') {
+          if (*p ++ == 'o') {
+              if (*p ++ == 't') {
+                  if (*p == 0)
+                      return 1;
+                  switch (*p ++) {
+                  case 'a':
+                      if (*p ++ == 't') {
+                          if (*p ++ == 'o') {
+                              if (*p == 0)
+                                  return 2;
+                          }
+                      }
+                      return error;
+                  case 't':
+                      if (*p ++ == 'e') {
+                          if (*p ++ == 'r') {
+                              if (*p ++ == 'y') {
+                                  if (*p == 0)
+                                      return 3;
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+      }
+      return error;
+
+  $ trie --trie=ternary --output=c-code --gen=compact
+      if (*p ++ == 'p' &&
+          *p ++ == 'o' &&
+          *p ++ == 't') {
+          if (*p == 0)
+              return 1;
+          switch (*p ++) {
+          case 'a':
+              if (*p ++ == 't' &&
+                  *p ++ == 'o' &&
+                  *p == 0)
+                  return 2;
+              return error;
+          case 't':
+              if (*p ++ == 'e' &&
+                  *p ++ == 'r' &&
+                  *p ++ == 'y' &&
+                  *p == 0)
+                  return 3;
+          }
+      }
+      return error;
+
+Note that the above invocation of 'trie' produced exactly the body of the
+'lookup' function that was introduced in section 1.
+
+Finally, calling for the functions 'gen_{wide,compact}_expr' will produce the
+following output. Note that these functions produce different kind of texts,
+depending on which expression type get specified in the invoking command line
+by the option `-e|--expr-type':
+
+  $ trie --trie=ternary --output=expr --expr=cxxpy --gen=wide
+  (
+      pot [
+          ato |
+          tery
+      ]
+  )
+
+  $ trie --trie=ternary --output=expr --expr=cxxpy --gen=compact
+  pot[ato|tery]
+
+  $ trie --trie=ternary --output=expr --expr=perl --gen=wide
+  (?:
+      pot (?:
+          ato |
+          tery
+      )?
+  )
+
+  $ trie --trie=ternary --output=expr --expr=perl --gen=compact
+  pot(?:ato|tery)?
+
+  $ trie --trie=ternary --output=expr --expr=bash --gen=wide
+  {
+      pot {,
+          ato,
+          tery
+      }
+  }
+
+  $ trie --trie=ternary --output=expr --expr=bash --gen=compact
+  {pot{,ato,tery}}
+
+4.b. The Shell Function 'gen-func'
+----------------------------------
+
+The shell function 'gen-func' -- to be found defined in the bash script file
+'commands.sh' -- is a wrapper over the main program 'trie'. Its purpose is
+to generate complete C++ functions implementing the 'lookup' code depicted
+in section 1. Prior to use 'gen-func' at the command line prompt, the script
+file 'commands.sh' has to be sourced in. This bash script is located in the
+top directory of the source tree.
+
+  $ . commands.sh
+
+  $ printf '%s\n' pot potato pottery|gen-func -h.
+  bool lookup(const char* n, result_t& t)
+  {
+      // pattern: pot[ato|tery]
+      if (*n ++ == 'p' &&
+          *n ++ == 'o' &&
+          *n ++ == 't') {
+          if (*n == 0) {
+              t = result_t::pot;
+              return true;
+          }
+          switch (*n ++) {
+          case 'a':
+              if (*n ++ == 't' &&
+                  *n ++ == 'o' &&
+                  *n == 0) {
+                  t = result_t::potato;
+                  return true;
+              }
+              return false;
+          case 't':
+              if (*n ++ == 'e' &&
+                  *n ++ == 'r' &&
+                  *n ++ == 'y' &&
+                  *n == 0) {
+                  t = result_t::pottery;
+                  return true;
+              }
+          }
+      }
+      return false;
+  }
+
+Note that the command line argument `-h.' passed in to 'gen-func' instructs the
+shell function to lookup for the 'trie' binary in the current directory. Had not
+`-h|--home' been specified in the invoking command line, the shell function would
+have looked up for 'trie' in $HOME/trie-gen.
+
+The Appendix section presents a few more things about 'gen-func', along with its
+command line options.
+
+
+5. References
+=============
+
+Internet Resources:
+
+[1]  GNU Compilers
+     http://gcc.gnu.org/onlinedocs/gcc-4.8.0/gcc/
+
+C and C++ ISO/IEC Standard Documents:
+
+[2]  ISO/IEC 9899:TC3
+     Programming Languages -- C
+
+     Draft of the C99 standard with corrigenda TC1, TC2, and TC3 included,
+     dated September 7, 2007:
+     http://www.open-std.org/jtc1/sc22/WG14/www/docs/n1256.pdf
+
+[3]  ISO/IEC 9899:2011
+     Programming Languages -- C
+
+     The final draft of C1X, dated April 12, 2011:
+     http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf
+
+[4]  ISO/IEC 14882:2003(E)
+     Programming Languages -- C++ (ISO/ANSI C++ standard).
+
+     C++03 Language Standard: C++98 plus a technical corrigenda
+     http://openassist.googlecode.com/files/C++ Standard - ANSI ISO IEC 14882 2003.pdf
+
+[5]  ISO/IEC 14882:2011
+     Programming Languages -- C++ (ISO/ANSI C++ standard).
+     C++11 Language Standard
+
+     First draft after the C++11 standard, contains the C++11 standard plus
+     minor editorial changes, dated January 16, 2012:
+     http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3337.pdf
+     
+Trie-related Books:
+
+[6]  Donald E. Knuth
+     The Art of Computer Programming,
+     Vol. 3, Sorting and Searching, 2nd ed.
+     Addison Wesley Longman, 1998, 780 pages
+     ISBN 978-0-201-89685-0
+
+     Chapter 6.3: Digital Searching, pp. 492-512
+
+[7]  Robert Sedgewick and Kevin Wayne
+     Algorithms, 4th edition
+     Addison Wesley, 2011, 976 pages
+     ISBN 978-0321-57351-3
+
+     Chapter 5, Strings; 5.2 Tries, pp. 732-758
+       Tries: pp. 732-745
+       Ternary Search Tries (TSTs): pp. 746-751
+
+[8]  Robert Sedgewick and Philippe Flajolet
+     An Introduction to the Analysis of Algorithms, 2nd ed.
+     Addison-Wesley, 2013, 592 pages
+     ISBN 978-0-321-90575-8
+
+     Chapter 6: Trees:
+     Ternary trees: pp. 313-314
+
+     Chapter 8: Strings and Tries:
+     8.6 Tries: pp. 448-453
+     8.7 Trie Algorithms: pp. 453-458
+     8.8 Combinatorial Properties of Tries: pp. 459-464
+     8.9 Larger Alphabets: pp. 465-472
+       Multiway Tries: p. 465
+       Ternary Tries: pp. 465-466
+
+Trie-related Papers:
+
+[9]  Jon L. Bentley, Robert Sedgewick:
+     Fast Algorithms for Sorting and Searching Strings
+     8th Symposium on Discrete Algorithms, 1997, 360–369.
+
+     http://www.cs.princeton.edu/~rs/strings/
+     http://www.cs.princeton.edu/~rs/strings/paper.pdf
+     http://www.cs.princeton.edu/~rs/strings/tstdemo.c
+     http://www.cs.princeton.edu/~rs/strings/demo.c
+
+[10] Jon L. Bentley and Robert Sedgewick: Ternary Search Trees
+     Dr. Dobbs Journal April, 1998
+
+     http://www.drdobbs.com/database/ternary-search-trees/184410528
+
+[11] Julien Clément, Phillipe Flajolet and Brigitte Vallée:
+     The analysis of hybrid trie structures
+     9th Symposium on Discrete Algorithms, 1998, 531–539
+
+     http://algo.inria.fr/flajolet/Publications/ClFlVa98.pdf
+
+[12] Julien Clément, Phillipe Flajolet and Brigitte Vallée:
+     Dynamical sources in information theory: A general
+       analysis of trie structures
+     Algorithmica 29, 2001, 307–369.
+
+     http://algo.inria.fr/flajolet/Publications/RR-3645.pdf
+
+
+6. Appendix
+===========
+
+Trie-Gen takes input from 'stdin' consisting of sequences of chars separated
+by newline chars. Its command line options are shown below:
+
+  $ ./trie --help
+  usage: trie [OPTION]...
+  where the options are:
+    -t|--node-type=NODE      use the specified node type; any of: i[nt], f[loat] or
+                               s[tr[ing]]; the default is string
+    -T|--trie-type=TRIE      use the specified trie type: any of array or ternary;
+                               the default is ternary
+    -o|--output-type=OUT     generate output of the specified type: o[bj[ect]],
+                               c[-code], t[rie] or e[xpr]; the default is object
+    -g|--gen-type=GEN        when printing output of type c-code, trie or expr, generate
+                               it according to the specification: c[omp[act]] or w[ide];
+                               the default is wide
+    -c|--escape-chars=STR    when printing output of type expr, escape the specified chars
+    -e|--expr-type=EXPR      when printing output of type expr, generate the expression of
+                               given type: any of c[xxpy], p[erl] or b[ash]; the default
+                               is cxxpy
+    -D|--[expr-]depth=NUM    use the specified maximum depth for the generated expression
+                               when printing output of type expr
+    -a|--[no-][print-]attrs  put annotation attributes in structure print outs
+                               or otherwise do not (default not)
+    -s|--[no-][print-]stats  print out some statistics information
+                               or otherwise do not (default not)
+    -d|--[no-][print-]dots   put indenting dots in structure print outs
+                               or otherwise do not (default not)
+       --debug[=LEVEL]       do print some debugging output; LEVEL is [0-9], default 1;
+       --no-debug            do not print debugging output at all (default)
+       --dump-opt[ion]s      print options and exit
+    -V|--[no-]verbose        be verbose (cumulative) or not (default not)
+    -v|--version             print version numbers and exit
+       --help                display this help info and exit
+
+The command line options of the shell function 'gen-func' in 'commands.sh' are:
+
+  $ funchelp -f commands.sh -c gen-func --long=auto
+  actions:
+    -C|--gen-code         gen code (default)
+    -R|--gen-regex        gen regex
+  
+  options:
+    -f|--func-name=STR    function name (the default is 'lookup')
+    -h|--home=DIR         home dir (the default is '$HOME/trie-gen')
+    -i|--input=FILE       input file (default is stdin)
+    -r|--result-type=STR  result type name (the default is 'result_t')
+    -v|--verbose          be verbose
+
+The shell function 'gen-func' takes input from 'stdin' or from the file of which
+name is passed in via the command line option `-i|--input'. The input consists of
+a series of lines of text, each line made of a series of words separated by space
+or tab characters. The last word on a line has a special meaning when its first
+character is '=':
+
+  $ alias gen-func='gen-func -h.'
+
+  $ diff -u8 -Lfoo <(gen-func <<< foo) -L'foo =bar' <(gen-func <<< 'foo =bar')
+  --- foo
+  +++ foo =bar
+  @@ -1,12 +1,12 @@
+   bool lookup(const char* n, result_t& t)
+   {
+       // pattern: foo
+       if (*n ++ == 'f' &&
+           *n ++ == 'o' &&
+           *n ++ == 'o' &&
+           *n == 0) {
+  -        t = result_t::foo;
+  +        t = result_t::bar;
+           return true;
+       }
+       return false;
+   }
+
+
+--------------------------------------------------------------------------------
+
+The content of this file has been revised as follows:
+
+  * 2014-09-18  initial version relative to Lookup Gen v0.1
+  * 2016-07-20  accommodate to the changes of Lookup Gen up to v0.5
+  * 2016-07-22  complete revision before making public Lookup Gen as Trie-Gen
+
+
