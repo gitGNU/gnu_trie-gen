@@ -400,6 +400,16 @@ gen-func()
     done
 
     local h2
+    test "$h" != "+" && h2="$h" || h2=''
+    quote h2
+
+    test "$i" == "-" && i=''
+    if [ -n "$i" -a ! -f "$i" ]; then
+        error "input file '$i' not found"
+        test "$x" == "eval" && return 1
+    fi
+    quote i
+
     local a
     local s
     local s2
@@ -424,7 +434,8 @@ gen-func()
         a+='\\1\\2t = '"$r"'::%s;\\n\\1\\2return true;\\n\\1}/\n", s, r)
             }'
         c="\
-awk '$a'"
+awk '$a'${i:+ \\
+$i}"
         $x "$c"
     elif [ "$act" == "C" ]; then
         test "$h" == "+" && h2="$home" || h2="$h"
@@ -453,16 +464,6 @@ awk '$a'"
             quote t
         fi
         trap 'rm -f $t' EXIT
-
-        test "$h" != "+" && h2="$h" || h2=''
-        quote h2
-
-        test "$i" == "-" && i=''
-        if [ -n "$i" -a ! -f "$i" ]; then
-            error "input file '$i' not found"
-            test "$x" == "eval" && return 1
-        fi
-        quote i
         quote r
 
         c="\
