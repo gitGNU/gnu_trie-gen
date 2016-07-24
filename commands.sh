@@ -399,10 +399,6 @@ gen-func()
         assign2 $n ${n}def   # used $f, $fdef, $r and $rdef
     done
 
-    local h2
-    test "$h" != "+" && h2="$h" || h2=''
-    quote h2
-
     test "$i" == "-" && i=''
     if [ -n "$i" -a ! -f "$i" ]; then
         error "input file '$i' not found"
@@ -410,6 +406,7 @@ gen-func()
     fi
     quote i
 
+    local h2
     local a
     local s
     local s2
@@ -464,6 +461,9 @@ $i}"
             quote t
         fi
         trap 'rm -f $t' EXIT
+
+        test "$h" != "+" && h2="$h" || h2=''
+        quote h2
         quote r
 
         c="\
