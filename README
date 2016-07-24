@@ -1,3 +1,22 @@
+Copyright (C) 2016  Stefan Vargyas
+
+This file is part of Trie-Gen.
+
+Trie-Gen is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Trie-Gen is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Trie-Gen.  If not, see <http://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------------------
+
 
                                     Trie-Gen
                                     ~~~~~~~~
@@ -136,7 +155,7 @@ The programs used by the testing scripts 'test/test*.sh' are the following:
   * GNU sed 4.1.5.
 
 
-5. References
+4. References
 =============
 
 [1] GNU Compilers
@@ -149,7 +168,7 @@ The programs used by the testing scripts 'test/test*.sh' are the following:
     Chapter 8: Strings and Tries, pp. 448-471
 
 
-6. Appendix
+5. Appendix
 ===========
 
 For the following set of keywords (which is part of a longer list of AST node
