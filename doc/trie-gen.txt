@@ -745,8 +745,8 @@ Trie-related Papers:
 6. Appendix
 ===========
 
-Trie-Gen takes input from 'stdin' consisting of sequences of chars separated
-by newline chars. Its command line options are shown below:
+Trie-Gen's main program, 'trie', takes input from 'stdin' consisting of sequences
+of characters separated by newline. Its command line options are shown below:
 
   $ ./trie --help
   usage: trie [OPTION]...
